@@ -1,0 +1,9 @@
+*
+!requirements/
+!src/
+!tests/
+!locust/
+!.editorconfig
+!Makefile
+!pyproject.toml
+!tox.ini
