@@ -55,7 +55,7 @@ async def measure_delay() -> None:
 
 
 def start() -> None:
-    app.state.stream = open("delay.csv", "w")
+    app.state.stream = open("/data/delay.csv", "w")
     app.state.stream.write("timestamp,delay\n")
     app.state.delay = asyncio.get_running_loop().create_task(measure_delay())
 

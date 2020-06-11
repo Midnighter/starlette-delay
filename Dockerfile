@@ -20,7 +20,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/src
 
-COPY requirements requirements/
+COPY requirements/requirements.txt requirements/requirements.txt
 
 RUN set -eux \
     && pip install -r /app/requirements/requirements.txt \

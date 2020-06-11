@@ -23,7 +23,7 @@ from locust.contrib.fasthttp import FastHttpUser
 
 class APIClient(FastHttpUser):
 
-    wait_time = constant_pacing(1)
+    wait_time = constant_pacing(2)
 
     @task
     def index_page(self):

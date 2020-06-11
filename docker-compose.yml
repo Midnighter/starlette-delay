@@ -10,6 +10,7 @@ services:
       - "${API_PORT:-8000}:8000"
     volumes:
     - ".:/app/"
+    - "./data:/data"
 #    environment:
 #    - PYTHONASYNCIODEBUG=1
 #    - PYTHONWARNINGS=default
@@ -21,14 +22,22 @@ services:
      - "${WEB_PORT:-8089}:8089"
     volumes:
       - "./locust:/mnt/locust"
+      - "./data:/data"
     depends_on:
       - web
     command: >
       -f /mnt/locust/locustfile.py
       --master
       --host http://web:${API_PORT:-8000}
+      --users 200
+      --hatch-rate 50
+      --run-time 120s
+      --headless
+      --csv /data/delay
+      --csv-full-history
+      --print-stats
       --step-load
-      --step-users 10
+      --step-users 20
       --step-time 10s
 
 
@@ -38,4 +47,7 @@ services:
       - "./locust:/mnt/locust"
     depends_on:
       - manager
-    command: -f /mnt/locust/locustfile.py --worker --master-host manager
+    command: >
+      -f /mnt/locust/locustfile.py
+      --worker
+      --master-host manager
