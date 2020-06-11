@@ -5,8 +5,8 @@
 .PHONY: qa
 ## Apply code quality assurance tools.
 qa:
-	isort --recursive src/ tests/ locust/
-	black src/ tests/ locust/
+	isort --recursive src/ locust/
+	black src/ locust/
 
 ## Upgrade the dependencies.
 lock:
