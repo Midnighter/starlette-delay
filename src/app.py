@@ -20,13 +20,14 @@
 import asyncio
 import logging
 import time
+from datetime import datetime, timezone
 
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 
-logging.getLogger("asyncio").setLevel(logging.DEBUG)
+# logging.getLogger("asyncio").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -46,11 +47,26 @@ async def measure_delay() -> None:
         start = time.perf_counter()
         await asyncio.sleep(1)
         delay = time.perf_counter() - start - 1
+        timestamp = datetime.now(timezone.utc)
+        app.state.stream.write(
+            f"{timestamp.isoformat(timespec='microseconds')},{delay}\n"
+        )
         logger.info(f"Measured delay: %.3G s", delay)
 
 
-async def start() -> None:
-    asyncio.get_running_loop().create_task(measure_delay())
+def start() -> None:
+    app.state.stream = open("delay.csv", "w")
+    app.state.stream.write("timestamp,delay\n")
+    app.state.delay = asyncio.get_running_loop().create_task(measure_delay())
 
 
-app = Starlette(debug=True, routes=[Route("/json", endpoint)], on_startup=[start])
+def end() -> None:
+    app.state.delay.cancel()
+    app.state.stream.flush()
+    app.state.stream.close()
+
+
+# app = Starlette(debug=True, routes=[Route("/json", endpoint)], on_startup=[start])
+app = Starlette(
+    routes=[Route("/json", endpoint)], on_startup=[start], on_shutdown=[end]
+)
