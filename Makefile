@@ -12,12 +12,6 @@ qa:
 lock:
 	pip-compile --generate-hashes --upgrade --allow-unsafe requirements/requirements.in
 
-.PHONY: tests
-## Execute the test suite in a running stack.
-test:
-	docker-compose run web /bin/sh -c \
-		"pip install pytest && pytest"
-
 ################################################################################
 # Self Documenting Commands                                                    #
 ################################################################################
