@@ -2,6 +2,11 @@
 # COMMANDS                                                                     #
 ################################################################################
 
+.PHONY: clean
+## Remove all dependency pins.
+clean:
+	rm -f requirements/*.txt
+
 .PHONY: qa
 ## Apply code quality assurance tools.
 qa:
@@ -9,8 +14,16 @@ qa:
 	black src/ locust/
 
 ## Upgrade the dependencies.
-lock:
+lock: requirements/requirements.txt requirements/locust.txt requirements/interactive.txt
+
+requirements/requirements.txt:
 	pip-compile --generate-hashes --upgrade --allow-unsafe requirements/requirements.in
+
+requirements/locust.txt:
+	pip-compile --generate-hashes --upgrade --allow-unsafe requirements/locust.in
+
+requirements/interactive.txt:
+	pip-compile --generate-hashes --upgrade --allow-unsafe requirements/interactive.in
 
 ################################################################################
 # Self Documenting Commands                                                    #
