@@ -13,26 +13,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM python:3.8-slim
 
-WORKDIR /app
+from abc import ABC
+from datetime import datetime
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
 
-RUN set -eux \
-    && apt-get update \
-    && apt-get install --yes --only-upgrade openssl ca-certificates \
-    && apt-get install --yes libpq5 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+class AbstractTestRunWriter(ABC):
+    def __init__(
+        self, test_plan: str, profile: str = "", description: str = "", **kwargs
+    ) -> None:
+        """"""
+        super().__init__(**kwargs)
 
-COPY requirements/requirements.txt requirements/requirements.txt
+    def start(self, timestamp: datetime) -> None:
+        raise NotImplementedError()
 
-RUN set -eux \
-    && pip install -r /app/requirements/requirements.txt \
-    && rm -rf /root/.cache/pip
-
-COPY src src/
-
-CMD ["uvicorn", "--host", "0.0.0.0", "--no-access-log", "app:app"]
+    def stop(self, timestamp: datetime) -> None:
+        raise NotImplementedError()

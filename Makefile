@@ -11,7 +11,7 @@ clean:
 ## Apply code quality assurance tools.
 qa:
 	isort --recursive src/ locust/
-	black src/ locust/
+	black src/ locust/ alembic/
 
 ## Upgrade the dependencies.
 lock: requirements/requirements.txt requirements/locust.txt requirements/interactive.txt
@@ -24,6 +24,13 @@ requirements/locust.txt:
 
 requirements/interactive.txt:
 	pip-compile --generate-hashes --upgrade --allow-unsafe requirements/interactive.in
+
+.PHONY: install
+install:
+	pip install -r requirements/interactive.txt
+	jupyter labextension install jupyterlab-plotly@4.8.1 --no-build
+	jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget@4.8.1 --no-build
+	jupyter lab build
 
 ################################################################################
 # Self Documenting Commands                                                    #

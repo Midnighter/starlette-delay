@@ -13,26 +13,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM python:3.8-slim
 
-WORKDIR /app
+from abc import ABC
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
+import gevent
 
-RUN set -eux \
-    && apt-get update \
-    && apt-get install --yes --only-upgrade openssl ca-certificates \
-    && apt-get install --yes libpq5 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+import locust.env
 
-COPY requirements/requirements.txt requirements/requirements.txt
 
-RUN set -eux \
-    && pip install -r /app/requirements/requirements.txt \
-    && rm -rf /root/.cache/pip
+class AbstractUserCountWriter(ABC):
+    def __init__(self, *, environment: locust.env.Environment, **kwargs) -> None:
+        """"""
+        super().__init__(**kwargs)
+        self._env = environment
+        self._counter = gevent.spawn(self._count_users)
 
-COPY src src/
+    def _count_users(self) -> None:
+        while True:
+            if self._env.runner is not None:
+                self._write_count(self._env.runner.user_count)
+            gevent.sleep(1.0)
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--no-access-log", "app:app"]
+    def _write_count(self, count: int):
+        raise NotImplementedError()

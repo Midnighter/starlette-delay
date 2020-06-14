@@ -13,26 +13,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM python:3.8-slim
 
-WORKDIR /app
+from sqlalchemy import Column, DateTime, Integer, String, Text
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
+from ...helpers import timezone_aware_now
+from . import Base
 
-RUN set -eux \
-    && apt-get update \
-    && apt-get install --yes --only-upgrade openssl ca-certificates \
-    && apt-get install --yes libpq5 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY requirements/requirements.txt requirements/requirements.txt
+class TestRun(Base):
 
-RUN set -eux \
-    && pip install -r /app/requirements/requirements.txt \
-    && rm -rf /root/.cache/pip
+    __tablename__ = "test_run"
 
-COPY src src/
-
-CMD ["uvicorn", "--host", "0.0.0.0", "--no-access-log", "app:app"]
+    id = Column(Integer, primary_key=True)
+    test_plan = Column(String(32), default="", nullable=False)
+    profile = Column(String(32))
+    description = Column(Text)
+    created_on = Column(
+        DateTime(timezone=True), nullable=False, default=timezone_aware_now
+    )
+    started_on = Column(DateTime(timezone=True))
+    completed_on = Column(DateTime(timezone=True))

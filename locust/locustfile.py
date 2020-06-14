@@ -17,16 +17,63 @@
 """"""
 
 
-from locust import constant_pacing, task
+import atexit
+import logging
+import os
+
+from sqlalchemy import create_engine
+
+from locust import constant_pacing, events, task
 from locust.contrib.fasthttp import FastHttpUser
+from plugins.helpers import is_manager
+from plugins.listener import RequestListener, TestRunListener
+from plugins.query import query_run_id
+from plugins.writer import RequestORMWriter, TestRunORMWriter, UserCountORMWriter
+from plugins.writer.orm import Session
+
+
+logger = logging.getLogger(__name__)
+engine = create_engine(
+    f"postgresql+psycopg2://postgres:{os.getenv('POSTGRES_PASSWORD')}@db:5432/postgres"
+)
+Session.configure(bind=engine)
+session = Session()
 
 
 class APIClient(FastHttpUser):
 
-    wait_time = constant_pacing(2)
+    wait_time = constant_pacing(3)
 
     @task
     def index_page(self):
         response = self.client.get("/json")
         assert response.status_code == 200
         assert response.json()["message"] == "Hello, World!"
+
+
+@events.init.add_listener
+def on_locust_init(environment, **_kwargs):
+    if is_manager():
+        TestRunListener(
+            environment=environment,
+            writer=TestRunORMWriter(
+                session=session,
+                test_plan="delay_benchmark",
+                description="Testing async delay",
+            ),
+        )
+    run_id = query_run_id(session)
+    logger.info("Identified run id %d.", run_id)
+    RequestListener(
+        environment=environment,
+        writer=RequestORMWriter(session=session, run_id=run_id),
+    )
+    if is_manager():
+        UserCountORMWriter(environment=environment, session=session, run_id=run_id)
+
+
+def shutdown():
+    session.close()
+
+
+atexit.register(shutdown)

@@ -13,26 +13,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM python:3.8-slim
 
-WORKDIR /app
+from sqlalchemy import Column, DateTime, ForeignKey, Integer
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
+from . import Base
 
-RUN set -eux \
-    && apt-get update \
-    && apt-get install --yes --only-upgrade openssl ca-certificates \
-    && apt-get install --yes libpq5 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY requirements/requirements.txt requirements/requirements.txt
+class UserCount(Base):
 
-RUN set -eux \
-    && pip install -r /app/requirements/requirements.txt \
-    && rm -rf /root/.cache/pip
+    __tablename__ = "user_count"
 
-COPY src src/
-
-CMD ["uvicorn", "--host", "0.0.0.0", "--no-access-log", "app:app"]
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, primary_key=True)
+    run_id = Column(Integer, ForeignKey("test_run.id"), nullable=False)
+    count = Column(Integer, nullable=False)

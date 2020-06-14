@@ -1,53 +1,84 @@
 version: "3.7"
 
+volumes:
+  pg-data:
+
 services:
+
   web:
     build:
       context: .
       dockerfile: Dockerfile
     image: midnighter/starlette-delay:latest
     ports:
-      - "${API_PORT:-8000}:8000"
+    - "${API_PORT:-8000}:8000"
     volumes:
     - ".:/app/"
     - "./data:/data"
-#    environment:
+    depends_on:
+    - db
+    environment:
+    - POSTGRES_URL=${POSTGRES_URL:-postgresql://postgres:secret@db:5432/postgres}
 #    - PYTHONASYNCIODEBUG=1
 #    - PYTHONWARNINGS=default
 #    command: uvicorn --host 0.0.0.0 --access-log --reload --log-level debug app:app
 
   manager:
-    image: locustio/locust:1.0.2
+    build:
+      context: .
+      dockerfile: Dockerfile.locust
+    image: midnighter/locust-timescale:1.0.3
     ports:
-     - "${WEB_PORT:-8089}:8089"
+    - "${WEB_PORT:-8089}:8089"
     volumes:
-      - "./locust:/mnt/locust"
-      - "./data:/data"
+    - "./locust:/mnt/locust"
+    - "./data:/data"
     depends_on:
-      - web
+    - web
+    - db
+    environment:
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
     command: >
       -f /mnt/locust/locustfile.py
       --master
       --host http://web:${API_PORT:-8000}
       --users 200
       --hatch-rate 50
-      --run-time 120s
+      --run-time 180s
       --headless
-      --csv /data/delay
-      --csv-full-history
       --print-stats
       --step-load
       --step-users 20
-      --step-time 10s
-
+      --step-time 15s
 
   worker:
-    image: locustio/locust:1.0.2
+    build:
+      context: .
+      dockerfile: Dockerfile.locust
+    image: midnighter/locust-timescale:1.0.3
     volumes:
-      - "./locust:/mnt/locust"
+    - "./locust:/mnt/locust"
     depends_on:
-      - manager
+    - manager
+    - db
+    environment:
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
     command: >
       -f /mnt/locust/locustfile.py
       --worker
       --master-host manager
+
+  db:
+    image: timescale/timescaledb:latest-pg12-oss
+    user: postgres
+    healthcheck:
+      test: pg_isready
+      interval: 5s
+      timeout: 10s
+      retries: 12
+    ports:
+    - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+    - pg-data:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}

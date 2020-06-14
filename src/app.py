@@ -20,15 +20,20 @@
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+from databases import Database, DatabaseURL
 from starlette.applications import Starlette
+from starlette.config import Config
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 
 # logging.getLogger("asyncio").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
+config = Config(".env")
+DATABASE_URL = config("POSTGRES_URL", cast=DatabaseURL)
+database = Database(DATABASE_URL)
 
 
 async def endpoint(_) -> JSONResponse:
@@ -47,23 +52,51 @@ async def measure_delay() -> None:
         start = time.perf_counter()
         await asyncio.sleep(1)
         delay = time.perf_counter() - start - 1
-        timestamp = datetime.now(timezone.utc)
-        app.state.stream.write(
-            f"{timestamp.isoformat(timespec='microseconds')},{delay}\n"
+        app.state.records.append(
+            {
+                "timestamp": datetime.now(timezone.utc),
+                "delay": delay,
+                "run_id": app.state.run_id,
+            }
         )
         logger.info(f"Measured delay: %.3G s", delay)
 
 
-def start() -> None:
-    app.state.stream = open("/data/delay.csv", "w")
-    app.state.stream.write("timestamp,delay\n")
+async def query_run_id(database: Database, max_tries: int = 20) -> int:
+    starting_from = datetime.now(timezone.utc) - timedelta(seconds=5)
+    for _ in range(max_tries):
+        try:
+            result = await database.fetch_one(
+                """SELECT id, created_on FROM test_run
+                WHERE completed_on IS NULL AND created_on > :start
+                ORDER BY created_on DESC NULLS LAST
+                LIMIT 1""",
+                {"start": starting_from},
+            )
+            return result["id"]
+        except Exception:
+            logger.error("Could not find the test run id yet. Retrying.")
+            await asyncio.sleep(0.5)
+            continue
+    raise RuntimeError("Could not find the test run id!")
+
+
+async def start() -> None:
+    await database.connect()
+    app.state.run_id = await query_run_id(database)
+    logger.info("Identified run id %d.", app.state.run_id)
+    app.state.records = []
     app.state.delay = asyncio.get_running_loop().create_task(measure_delay())
 
 
-def end() -> None:
+async def end() -> None:
     app.state.delay.cancel()
-    app.state.stream.flush()
-    app.state.stream.close()
+    await database.execute_many(
+        """INSERT INTO delay(run_id, timestamp, delay)
+        VALUES (:run_id, :timestamp, :delay)""",
+        app.state.records,
+    )
+    await database.disconnect()
 
 
 # app = Starlette(debug=True, routes=[Route("/json", endpoint)], on_startup=[start])

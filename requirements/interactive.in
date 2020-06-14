@@ -1,4 +1,9 @@
+alembic
+ipywidgets>=7.5
 jupyterlab
 nb_black
 pandas
-seaborn
+plotly
+psycopg2-binary
+python-dotenv
+sqlalchemy

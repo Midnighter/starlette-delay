@@ -1,2 +1,5 @@
+asyncpg
+databases
+psycopg2-binary
 starlette
 uvicorn

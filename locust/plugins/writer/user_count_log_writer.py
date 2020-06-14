@@ -13,26 +13,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM python:3.8-slim
 
-WORKDIR /app
+import logging
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
+import locust.env
 
-RUN set -eux \
-    && apt-get update \
-    && apt-get install --yes --only-upgrade openssl ca-certificates \
-    && apt-get install --yes libpq5 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+from .abstract_user_count_writer import AbstractUserCountWriter
 
-COPY requirements/requirements.txt requirements/requirements.txt
 
-RUN set -eux \
-    && pip install -r /app/requirements/requirements.txt \
-    && rm -rf /root/.cache/pip
+logger = logging.getLogger(__name__)
 
-COPY src src/
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--no-access-log", "app:app"]
+class UserCountLogWriter(AbstractUserCountWriter):
+    def __init__(self, *, environment: locust.env.Environment, **kwargs) -> None:
+        """"""
+        super().__init__(environment=environment, **kwargs)
+
+    def _write_count(self, count: int):
+        logger.info("User count: %d", count)
