@@ -30,6 +30,7 @@ install:
 	pip install -r requirements/interactive.txt
 	jupyter labextension install jupyterlab-plotly@4.8.1 --no-build
 	jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget@4.8.1 --no-build
+	jupyter labextension install @jupyterlab/toc --no-build
 	jupyter lab build
 
 ################################################################################
